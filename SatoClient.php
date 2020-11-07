@@ -7,6 +7,7 @@ class SatoClient
     private $id;
 
     private $mode = 'file_get_contents';
+    private static $modes = ['curl' => 'curl', 'file_get_contents' => 'file_get_contents'];
     function __construct($username, $api_key)
     {
         $this->username = $username;
@@ -94,14 +95,26 @@ class SatoClient
             $result = file_get_contents($this->api_url, false, $context);
             $data = json_decode($result, true);
         } elseif ($this->mode == 'curl') {
-            // we will welcome pull requests to add curl code
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $this->api_url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+            curl_setopt($ch, CURLOPT_FRESH_CONNECT, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array("Content-Type: application/json"));
+
+            $result = curl_exec($ch);
+            $data = json_decode($result, true);
         }
         return $data;
     }
 
     function set_mode($mode)
     {
-        $this->mode = $mode;
+        if (in_array($mode, self::$modes)) $this->mode = $mode;
     }
     function get_mode()
     {
